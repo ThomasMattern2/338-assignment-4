@@ -3,8 +3,8 @@ import java.util.LinkedList;
 
 public class DLeftHashTable {
     private int buckets;
-    private LinkedList<Entry>[] leftTable;
-    private LinkedList<Entry>[] rightTable;
+    private LinkedList<Pair>[] leftTable;
+    private LinkedList<Pair>[] rightTable;
 
     public DLeftHashTable(int buckets) {
         this.buckets = buckets;
@@ -18,72 +18,53 @@ public class DLeftHashTable {
     }
 
     public void insert(String key, int value) {
-        int leftIndex = hash1(key);
-        int rightIndex = hash2(key);
+        int leftIndex = Math.floorMod(key.hashCode(), buckets);
+        int rightIndex = Math.floorMod(key.hashCode() * 31, buckets);
 
         int leftSize = leftTable[leftIndex].size();
         int rightSize = rightTable[rightIndex].size();
 
         if (leftSize <= rightSize) {
-            leftTable[leftIndex].add(new Entry(key, value));
+            leftTable[leftIndex].add(new Pair(key, value));
         } else {
-            rightTable[rightIndex].add(new Entry(key, value));
+            rightTable[rightIndex].add(new Pair(key, value));
         }
     }
 
     public Integer lookup(String key) {
-        int leftIndex = hash1(key);
-        int rightIndex = hash2(key);
+        int leftIndex = Math.floorMod(key.hashCode(), buckets);
+        int rightIndex = Math.floorMod(key.hashCode() * 31, buckets);
 
-        for (Entry entry : leftTable[leftIndex]) {
-            if (entry.key.equals(key)) {
-                return entry.value;
+        for (Pair entry : leftTable[leftIndex]) {
+            if (entry.getKey().equals(key)) {
+                return entry.getValue();
             }
         }
 
-        for (Entry entry : rightTable[rightIndex]) {
-            if (entry.key.equals(key)) {
-                return entry.value;
+        for (Pair entry : rightTable[rightIndex]) {
+            if (entry.getKey().equals(key)) {
+                return entry.getValue();
             }
         }
 
         return null;
     }
 
-    private int hash1(String key) {
-        return Math.floorMod(key.hashCode(), buckets);
-    }
+    private static class Pair {
+        private final String key;
+        private final int value;
 
-    private int hash2(String key) {
-        return Math.floorMod(key.hashCode() * 31, buckets);
-    }
-    private static class Entry {
-        String key;
-        int value;
-
-        public Entry(String key, int value) {
+        public Pair(String key, int value) {
             this.key = key;
             this.value = value;
         }
-    }
-    public static void main(String[] args) {
-        DLeftHashTable dLeftHashTable = new DLeftHashTable(10);
 
-        // Insert some key-value pairs into the hash table
-        dLeftHashTable.insert("apple", 1);
-        dLeftHashTable.insert("banana", 2);
-        dLeftHashTable.insert("cherry", 3);
-        dLeftHashTable.insert("date", 4);
-        dLeftHashTable.insert("fig", 5);
+        public String getKey() {
+            return key;
+        }
 
-        // Lookup and print the values
-        System.out.println("apple: " + dLeftHashTable.lookup("apple"));
-        System.out.println("banana: " + dLeftHashTable.lookup("banana"));
-        System.out.println("cherry: " + dLeftHashTable.lookup("cherry"));
-        System.out.println("date: " + dLeftHashTable.lookup("date"));
-        System.out.println("fig: " + dLeftHashTable.lookup("fig"));
-
-        // Test with a key that doesn't exist
-        System.out.println("grape: " + dLeftHashTable.lookup("grape"));
+        public int getValue() {
+            return value;
+        }
     }
 }
