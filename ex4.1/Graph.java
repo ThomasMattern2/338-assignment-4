@@ -79,45 +79,4 @@ public class Graph {
             return edges;
         }
     }
-    public static String testGraph() {
-        StringBuilder result = new StringBuilder();
-        Graph graph = new Graph();
-
-        GraphNode nodeA = graph.addNode("A");
-        GraphNode nodeB = graph.addNode("B");
-        GraphNode nodeC = graph.addNode("C");
-
-        graph.addEdge(nodeA, nodeB, 5);
-        graph.addEdge(nodeB, nodeC, 3);
-
-        result.append("Node A connected to: ").append(nodeDataToString(nodeA.edges.keySet())).append("\n");
-        result.append("Node B connected to: ").append(nodeDataToString(nodeB.edges.keySet())).append("\n");
-        result.append("Node C connected to: ").append(nodeDataToString(nodeC.edges.keySet())).append("\n");
-
-        graph.removeEdge(nodeA, nodeB);
-        result.append("Removed edge between A and B\n");
-
-        result.append("Node A connected to: ").append(nodeDataToString(nodeA.edges.keySet())).append("\n");
-        result.append("Node B connected to: ").append(nodeDataToString(nodeB.edges.keySet())).append("\n");
-        result.append("Node C connected to: ").append(nodeDataToString(nodeC.edges.keySet())).append("\n");
-
-        graph.removeNode(nodeB);
-        result.append("Removed node B\n");
-
-        result.append("Node A connected to: ").append(nodeDataToString(nodeA.edges.keySet())).append("\n");
-        result.append("Node C connected to: ").append(nodeDataToString(nodeC.edges.keySet())).append("\n");
-
-        return result.toString();
-    }
-
-    public static String nodeDataToString(Set<GraphNode> nodes) {
-        return nodes.stream()
-                .map(GraphNode::getData)
-                .collect(Collectors.joining(", "));
-    }
-
-    public static void main(String[] args) {
-        String result = testGraph();
-        System.out.println(result);
-    }
 }
