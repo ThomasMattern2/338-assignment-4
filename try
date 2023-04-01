@@ -1,0 +1,84 @@
+    public List<GraphNode> slowSP(GraphNode source) {
+        Map<GraphNode, Integer> dist = new HashMap<>();
+        Map<GraphNode, GraphNode> prev = new HashMap<>();
+        Set<GraphNode> unvisited = new HashSet<>(nodes.values());
+
+        // Initialize distances to infinity and previous nodes to null
+        for (GraphNode node : nodes.values()) {
+            dist.put(node, Integer.MAX_VALUE);
+            prev.put(node, null);
+        }
+        dist.put(source, 0);
+
+        while (!unvisited.isEmpty()) {
+            // Inefficient node selection: linear search through unvisited nodes
+            GraphNode u = null;
+            int minDist = Integer.MAX_VALUE;
+            for (GraphNode node : unvisited) {
+                if (dist.get(node) < minDist) {
+                    u = node;
+                    minDist = dist.get(node);
+                }
+            }
+
+            unvisited.remove(u);
+            for (Map.Entry<GraphNode, Integer> entry : u.edges.entrySet()) {
+                GraphNode v = entry.getKey();
+                int weight = entry.getValue();
+                int alt = dist.get(u) + weight;
+                if (alt < dist.get(v)) {
+                    dist.put(v, alt);
+                    prev.put(v, u);
+                }
+            }
+        }
+
+        // Construct shortest path
+        List<GraphNode> path = new ArrayList<>();
+        GraphNode node = nodes.get("B");
+        while (node != null) {
+            path.add(node);
+            node = prev.get(node);
+        }
+        Collections.reverse(path);
+        return path;
+    }
+    public List<GraphNode> fastSP(GraphNode source) {
+        Map<GraphNode, Integer> dist = new HashMap<>();
+        Map<GraphNode, GraphNode> prev = new HashMap<>();
+        PriorityQueue<GraphNode> queue = new PriorityQueue<>(Comparator.comparingInt(dist::get));
+        Set<GraphNode> visited = new HashSet<>();
+
+        // Initialize distances to infinity and previous nodes to null
+        for (GraphNode node : nodes.values()) {
+            dist.put(node, Integer.MAX_VALUE);
+            prev.put(node, null);
+        }
+        dist.put(source, 0);
+        queue.offer(source);
+
+        while (!queue.isEmpty()) {
+            GraphNode u = queue.poll();
+            visited.add(u);
+            for (Map.Entry<GraphNode, Integer> entry : u.edges.entrySet()) {
+                GraphNode v = entry.getKey();
+                int weight = entry.getValue();
+                int alt = dist.get(u) + weight;
+                if (!visited.contains(v) && alt < dist.get(v)) {
+                    dist.put(v, alt);
+                    prev.put(v, u);
+                    queue.offer(v);
+                }
+            }
+        }
+
+        // Construct shortest path
+        List<GraphNode> path = new ArrayList<>();
+        GraphNode node = nodes.get("B");
+        while (node != null) {
+            path.add(node);
+            node = prev.get(node);
+        }
+        Collections.reverse(path);
+        return path;
+    }
