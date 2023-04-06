@@ -1,3 +1,5 @@
+package edu.ucalgary.oop;
+
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,12 +45,20 @@ public class Graph {
                     String node1Name = parts[0].trim();
                     String node2Name = parts[1].split("\\[")[0].trim();
 
+                    // Ignore edges with missing nodes
+                    if (node1Name.isEmpty() || node2Name.isEmpty()) {
+                        continue;
+                    }
+
                     GraphNode node1 = graph.nodes.computeIfAbsent(node1Name, name -> new GraphNode(name));
-                    GraphNode node2 = graph.nodes.computeIfAbsent(node2Name, name -> new GraphNode(name));
+                    GraphNode node2 = graph.nodes.computeIfAbsent(node2Name, name -> new GraphNode(node2Name));
 
                     int weight = 1;
                     if (line.contains("weight")) {
-                        weight = Integer.parseInt(line.split("weight=")[1].split("\\]")[0].trim());
+                        String[] weightParts = line.split("weight=");
+                        if (weightParts.length > 1) {
+                            weight = Integer.parseInt(weightParts[1].split("\\]")[0].trim());
+                        }
                     }
                     graph.addEdge(node1, node2, weight);
                 }
@@ -59,6 +69,7 @@ public class Graph {
         }
         return graph;
     }
+
 
     public static class GraphNode {
         private final String data;
@@ -77,90 +88,97 @@ public class Graph {
             return edges;
         }
     }
+    public Map<GraphNode, Integer> slowSP(GraphNode source) {
+        Map<GraphNode, Integer> dist = new HashMap<>();
+        PriorityQueue<GraphNode> pq = new PriorityQueue<>(Comparator.comparing(node -> dist.get(node)));
 
-    public List<Graph> slowSP(Graph source, Graph target) {
-        Map<Graph, Integer> dist = new HashMap<>();
-        Map<Graph, Graph> prev = new HashMap<>();
-        Set<Graph> unvisited = new HashSet<Graph>(nodes.values());
-
-        // Initialize distances to infinity and previous nodes to null
-        for (Graph node : nodes.values()) {
+        for (GraphNode node : nodes.values()) {
             dist.put(node, Integer.MAX_VALUE);
-            prev.put(node, null);
         }
         dist.put(source, 0);
 
-        while (!unvisited.isEmpty()) {
-            // Inefficient node selection: linear search through unvisited nodes
-            Graph u = null;
-            int minDist = Integer.MAX_VALUE;
-            for (Graph node : unvisited) {
-                if (dist.get(node) < minDist) {
-                    u = node;
-                    minDist = dist.get(node);
-                }
-            }
+        // Initialize distances for all nodes before adding them to the PriorityQueue
+        for (GraphNode node : nodes.values()) {
+            pq.add(node);
+        }
 
-            unvisited.remove(u);
-            for (Map.Entry<Graph, Integer> entry : u.getEdges().entrySet()) {
-                Graph v = entry.getKey();
-                int weight = entry.getValue();
+        while (!pq.isEmpty()) {
+            GraphNode u = pq.poll();
+
+            for (Map.Entry<GraphNode, Integer> edge : u.edges.entrySet()) {
+                GraphNode v = edge.getKey();
+                int weight = edge.getValue();
+
                 int alt = dist.get(u) + weight;
                 if (alt < dist.get(v)) {
                     dist.put(v, alt);
-                    prev.put(v, u);
+                    pq.remove(v);
+                    pq.add(v);
                 }
             }
         }
-
-        // Construct shortest path
-        List<Graph> path = new ArrayList<>();
-        Graph node = target;
-        while (node != null) {
-            path.add(node);
-            node = prev.get(node);
-        }
-        Collections.reverse(path);
-        return path;
+        return dist;
     }
+    private GraphNode findMinDistNode(Set<GraphNode> nodes, Map<GraphNode, Integer> dist) {
+        int minDist = Integer.MAX_VALUE;
+        GraphNode minNode = null;
 
-    public List<Graph> fastSP(Graph source, Graph target) {
-        Map<Graph, Integer> dist = new HashMap<>();
-        Map<Graph, Graph> prev = new HashMap<>();
-        PriorityQueue<Graph> queue = new PriorityQueue<>(Comparator.comparingInt(dist::get));
-        Set<Graph> visited = new HashSet<>();
+        for (GraphNode node : nodes) {
+            if (dist.get(node) < minDist) {
+                minDist = dist.get(node);
+                minNode = node;
+            }
+        }
+        return minNode;
+    }
+    public Map<GraphNode, Integer> fastSP(GraphNode source) {
+        Map<GraphNode, Integer> dist = new HashMap<>();
+        PriorityQueue<GraphNode> pq = new PriorityQueue<>(Comparator.comparing(node -> dist.get(node)));
 
-        // Initialize distances to infinity and previous nodes to null
-        for (Graph node : nodes.values()) {
+        for (GraphNode node : nodes.values()) {
             dist.put(node, Integer.MAX_VALUE);
-            prev.put(node, null);
         }
         dist.put(source, 0);
-        queue.offer(source);
 
-        while (!queue.isEmpty()) {
-            Graph u = queue.poll();
-            visited.add(u);
-            for (Map.Entry<Graph, Integer> entry : u.getEdges().entrySet()) {
-                Graph v = entry.getKey();
-                int weight = entry.getValue();
+        // Initialize distances for all nodes before adding them to the PriorityQueue
+        for (GraphNode node : nodes.values()) {
+            pq.add(node);
+        }
+
+        while (!pq.isEmpty()) {
+            GraphNode u = pq.poll();
+
+            for (Map.Entry<GraphNode, Integer> edge : u.edges.entrySet()) {
+                GraphNode v = edge.getKey();
+                int weight = edge.getValue();
+
                 int alt = dist.get(u) + weight;
-                if (!visited.contains(v) && alt < dist.get(v)) {
+                if (alt < dist.get(v)) {
                     dist.put(v, alt);
-                    prev.put(v, u);
-                    queue.offer(v);
+                    pq.remove(v);
+                    pq.add(v);
                 }
             }
         }
+        return dist;
+    }
+    public static void main(String[] args) {
+        Graph graph = Graph.importFromFile("random.dot");
+        GraphNode source = graph.nodes.get("0"); // Assuming "0" is the source node
 
-        // Construct shortest path
-        List<Graph> path = new ArrayList<>();
-        Graph node = target;
-        while (node != null) {
-            path.add(node);
-            node = prev.get(node);
+        if (source == null) {
+            System.out.println("Error: Source node 0 not found in the graph");
+            return;
         }
-        Collections.reverse(path);
-        return path;
+
+        Map<GraphNode, Integer> slowShortestPaths = graph.slowSP(source);
+        Map<GraphNode, Integer> fastShortestPaths = graph.fastSP(source);
+
+        // Print the results
+        System.out.println("Slow Dijkstra's shortest paths:");
+        slowShortestPaths.forEach((k, v) -> System.out.println(k.getData() + ": " + v));
+
+        System.out.println("\nFast Dijkstra's shortest paths:");
+        fastShortestPaths.forEach((k, v) -> System.out.println(k.getData() + ": " + v));
     }
 }
