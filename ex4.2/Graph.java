@@ -1,114 +1,166 @@
+import java.io.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
 public class Graph {
-    // ...
+    private final Map<String, GraphNode> nodes;
 
-    // Method with inefficient node selection logic
-    public List<GraphNode> slowSP(GraphNode g) {
-        Map<GraphNode, Integer> distances = new HashMap<>();
-        Map<GraphNode, GraphNode> parents = new HashMap<>();
-        Set<GraphNode> visited = new HashSet<>();
-        
-        // Initialize distances to infinity for all nodes
-        for (GraphNode node : nodes.values()) {
-            distances.put(node, Integer.MAX_VALUE);
+    public Graph() {
+        nodes = new HashMap<>();
+    }
+
+    public GraphNode addNode(String data) {
+        GraphNode node = new GraphNode(data);
+        nodes.put(data, node);
+        return node;
+    }
+
+    public void removeNode(GraphNode node) {
+        nodes.values().forEach(n -> n.edges.remove(node));
+        nodes.remove(node.data);
+    }
+
+    public void addEdge(GraphNode n1, GraphNode n2, int weight) {
+        n1.edges.put(n2, weight);
+        n2.edges.put(n1, weight);
+    }
+
+    public void removeEdge(GraphNode n1, GraphNode n2) {
+        n1.edges.remove(n2);
+        n2.edges.remove(n1);
+    }
+
+    public static Graph importFromFile(String fileName) {
+        Graph graph = new Graph();
+        try (BufferedReader reader = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("strict graph")) {
+                    continue;
+                }
+                if (line.contains("--")) {
+                    String[] parts = line.split("--");
+                    String node1Name = parts[0].trim();
+                    String node2Name = parts[1].split("\\[")[0].trim();
+
+                    GraphNode node1 = graph.nodes.computeIfAbsent(node1Name, name -> new GraphNode(name));
+                    GraphNode node2 = graph.nodes.computeIfAbsent(node2Name, name -> new GraphNode(name));
+
+                    int weight = 1;
+                    if (line.contains("weight")) {
+                        weight = Integer.parseInt(line.split("weight=")[1].split("\\]")[0].trim());
+                    }
+                    graph.addEdge(node1, node2, weight);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
         }
-        distances.put(g, 0);  // Distance from source node to itself is 0
-        
-        while (visited.size() < nodes.size()) {
-            // Find the node with the minimum distance from the source node
-            GraphNode current = null;
+        return graph;
+    }
+
+    public static class GraphNode {
+        private final String data;
+        private final Map<GraphNode, Integer> edges;
+
+        public GraphNode(String data) {
+            this.data = data;
+            this.edges = new HashMap<>();
+        }
+
+        public String getData() {
+            return data;
+        }
+
+        public Map<GraphNode, Integer> getEdges() {
+            return edges;
+        }
+    }
+
+    public List<Graph> slowSP(Graph source, Graph target) {
+        Map<Graph, Integer> dist = new HashMap<>();
+        Map<Graph, Graph> prev = new HashMap<>();
+        Set<Graph> unvisited = new HashSet<Graph>(nodes.values());
+
+        // Initialize distances to infinity and previous nodes to null
+        for (Graph node : nodes.values()) {
+            dist.put(node, Integer.MAX_VALUE);
+            prev.put(node, null);
+        }
+        dist.put(source, 0);
+
+        while (!unvisited.isEmpty()) {
+            // Inefficient node selection: linear search through unvisited nodes
+            Graph u = null;
             int minDist = Integer.MAX_VALUE;
-            for (GraphNode node : nodes.values()) {
-                if (!visited.contains(node) && distances.get(node) < minDist) {
-                    current = node;
-                    minDist = distances.get(node);
+            for (Graph node : unvisited) {
+                if (dist.get(node) < minDist) {
+                    u = node;
+                    minDist = dist.get(node);
                 }
             }
-            
-            if (current == null) {
-                break;  // All remaining nodes are unreachable
-            }
-            
-            visited.add(current);
-            
-            // Update distances and parents for adjacent nodes
-            for (Map.Entry<GraphNode, Integer> entry : current.edges.entrySet()) {
-                GraphNode neighbor = entry.getKey();
+
+            unvisited.remove(u);
+            for (Map.Entry<Graph, Integer> entry : u.getEdges().entrySet()) {
+                Graph v = entry.getKey();
                 int weight = entry.getValue();
-                int newDist = distances.get(current) + weight;
-                if (newDist < distances.get(neighbor)) {
-                    distances.put(neighbor, newDist);
-                    parents.put(neighbor, current);
+                int alt = dist.get(u) + weight;
+                if (alt < dist.get(v)) {
+                    dist.put(v, alt);
+                    prev.put(v, u);
                 }
             }
         }
-        
-        // Build and return the path from the source node to each node
-        List<GraphNode> path = new ArrayList<>();
-        for (GraphNode node : nodes.values()) {
-            if (node == g) {
-                continue;
-            }
-            GraphNode current = node;
-            path.clear();
-            while (current != null) {
-                path.add(0, current);
-                current = parents.get(current);
-            }
-            if (path.get(0) != g) {
-                // Node is unreachable
-                path.clear();
-            }
-            node.edges.clear();  // Remove the weights from the edges
-            node.edges.putAll(parents.get(node).edges);  // Replace with the actual edges
-            node.edges.put(node, distances.get(node));  // Add the distance from the source node
-            node.edges.keySet().retainAll(path);  // Keep only the edges on the path
+
+        // Construct shortest path
+        List<Graph> path = new ArrayList<>();
+        Graph node = target;
+        while (node != null) {
+            path.add(node);
+            node = prev.get(node);
         }
-        return new ArrayList<>(nodes.values());
+        Collections.reverse(path);
+        return path;
     }
 
-    public List<GraphNode> slowSP(GraphNode g) {
-        List<GraphNode> path = new ArrayList<>();
-        path.add(g);
-        while (true) {
-            GraphNode current = path.get(path.size() - 1);
-            int smallestWeight = Integer.MAX_VALUE;
-            GraphNode nextNode = null;
-            for (Map.Entry<GraphNode, Integer> entry : current.edges.entrySet()) {
-                if (entry.getValue() < smallestWeight && !path.contains(entry.getKey())) {
-                    smallestWeight = entry.getValue();
-                    nextNode = entry.getKey();
+    public List<Graph> fastSP(Graph source, Graph target) {
+        Map<Graph, Integer> dist = new HashMap<>();
+        Map<Graph, Graph> prev = new HashMap<>();
+        PriorityQueue<Graph> queue = new PriorityQueue<>(Comparator.comparingInt(dist::get));
+        Set<Graph> visited = new HashSet<>();
+
+        // Initialize distances to infinity and previous nodes to null
+        for (Graph node : nodes.values()) {
+            dist.put(node, Integer.MAX_VALUE);
+            prev.put(node, null);
+        }
+        dist.put(source, 0);
+        queue.offer(source);
+
+        while (!queue.isEmpty()) {
+            Graph u = queue.poll();
+            visited.add(u);
+            for (Map.Entry<Graph, Integer> entry : u.getEdges().entrySet()) {
+                Graph v = entry.getKey();
+                int weight = entry.getValue();
+                int alt = dist.get(u) + weight;
+                if (!visited.contains(v) && alt < dist.get(v)) {
+                    dist.put(v, alt);
+                    prev.put(v, u);
+                    queue.offer(v);
                 }
             }
-            if (nextNode == null) {
-                break;
-            }
-            path.add(nextNode);
         }
+
+        // Construct shortest path
+        List<Graph> path = new ArrayList<>();
+        Graph node = target;
+        while (node != null) {
+            path.add(node);
+            node = prev.get(node);
+        }
+        Collections.reverse(path);
         return path;
     }
-    
-    public List<GraphNode> fastSP(GraphNode g) {
-        List<GraphNode> path = new ArrayList<>();
-        path.add(g);
-        while (true) {
-            GraphNode current = path.get(path.size() - 1);
-            int smallestWeight = Integer.MAX_VALUE;
-            GraphNode nextNode = null;
-            for (Map.Entry<GraphNode, Integer> entry : current.edges.entrySet()) {
-                if (entry.getValue() < smallestWeight && !path.contains(entry.getKey())) {
-                    smallestWeight = entry.getValue();
-                    nextNode = entry.getKey();
-                }
-            }
-            if (nextNode == null) {
-                break;
-            }
-            int nextNodeIndex = path.indexOf(nextNode);
-            if (nextNodeIndex != -1) {
-                path.subList(nextNodeIndex, path.size()).clear();
-            }
-            path.add(nextNode);
-        }
-        return path;
-    }
-    
+}
