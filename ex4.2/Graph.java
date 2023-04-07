@@ -8,10 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.github.sh0nk.matplotlib4j.*;
-import com.github.sh0nk.matplotlib4j.builder.*;
-import com.github.sh0nk.matplotlib4j.builder.HistBuilder.HistType;
-import com.github.sh0nk.matplotlib4j.kwargs.*;
+// import com.github.plot.Plot;
+// import com.github.plot.histogram.HistBuilder;
+// import com.github.plot.histogram.HistType;
 
 public class Graph {
     private final Map<String, GraphNode> nodes;
@@ -174,52 +173,67 @@ public class Graph {
         return dist;
     }
 
-    public static void main(String[] args) throws IOException, PythonExecutionException {
+    public static void main(String[] args) {
         Graph graph = Graph.importFromFile("random.dot");
         GraphNode source = graph.nodes.get("0"); // Assuming "0" is the source node
-    
+
         if (source == null) {
             System.out.println("Error: Source node 0 not found in the graph");
             return;
         }
-    
+
         long slowStartTime = System.nanoTime();
         Map<GraphNode, Integer> slowShortestPaths = graph.slowSP(source);
         long slowEndTime = System.nanoTime();
         long slowDuration = slowEndTime - slowStartTime;
-    
+
         long fastStartTime = System.nanoTime();
         Map<GraphNode, Integer> fastShortestPaths = graph.fastSP(source);
         long fastEndTime = System.nanoTime();
         long fastDuration = fastEndTime - fastStartTime;
-    
+
         // Print the results
         System.out.println("Slow Dijkstra's shortest paths:");
         slowShortestPaths.forEach((k, v) -> System.out.println(k.getData() + ": " + v));
         System.out.println("Slow Dijkstra's execution time: " + slowDuration + " nanoseconds");
-    
+
         System.out.println("\nFast Dijkstra's shortest paths:");
         fastShortestPaths.forEach((k, v) -> System.out.println(k.getData() + ": " + v));
         System.out.println("Fast Dijkstra's execution time: " + fastDuration + " nanoseconds");
-    
+
         long maxTime = Math.max(slowDuration, fastDuration);
         long minTime = Math.min(slowDuration, fastDuration);
         System.out.println("Max execution time: " + maxTime + " nanoseconds");
         System.out.println("Min execution time: " + minTime + " nanoseconds");
-    
-        // Create histogram
-        List<Long> executionTimes = new ArrayList<>();
-        executionTimes.add(slowDuration);
-        executionTimes.add(fastDuration);
 
-        Plot plt = Plot.create();
-        plt.hist().add(executionTimes).orientation(HistBuilder.Orientation.vertical);
-        plt.ylim(0, 1500);
-        plt.xlim(0, 1000);
+        long[] executionTimes = new long[graph.nodes.size()];
 
-        plt.title("Execution time histogram");
-        plt.xlabel("Execution Time (nanoseconds)");
-        plt.ylabel("Frequency");
-        plt.show();
+        // Loop through all the nodes in the graph
+        for (GraphNode node : graph.nodes.values()) {
+            // Run the slow and fast Dijkstra's algorithms for the node
+            Map<GraphNode, Integer> slowShortestPathsNode = graph.slowSP(node);
+            Map<GraphNode, Integer> fastShortestPathsNode = graph.fastSP(node);
+
+            // Calculate the execution time for the slow and fast algorithms
+            long slowTime = System.nanoTime();
+            graph.slowSP(node);
+            long slowExecutionTime = System.nanoTime() - slowTime;
+
+            long fastTime = System.nanoTime();
+            graph.fastSP(node);
+            long fastExecutionTime = System.nanoTime() - fastTime;
+
+            // Store the execution times in the array
+            int nodeIndex = Integer.parseInt(node.getData());
+            executionTimes[nodeIndex] = Math.max(slowExecutionTime, fastExecutionTime);
         }
+
+        // Create a histogram of the execution times
+        Plot plt = Plot.create();
+        Hist hist = plt.plot().hist(executionTimes);
+        hist.xlabel("Execution Time (nanoseconds)");
+        hist.ylabel("Frequency");
+        hist.title("Distribution of Execution Times");
+        plt.show();
+    }
 }
