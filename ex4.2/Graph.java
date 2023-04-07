@@ -1,4 +1,3 @@
-
 package edu.ucalgary.oop;
 
 import java.io.*;
@@ -8,9 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-// import com.github.plot.Plot;
-// import com.github.plot.histogram.HistBuilder;
-// import com.github.plot.histogram.HistType;
+import com.github.sh0nk.matplotlib4j.*;
+import com.github.sh0nk.matplotlib4j.builder.*;
+import com.github.sh0nk.matplotlib4j.builder.HistBuilder.HistType;
+import com.github.sh0nk.matplotlib4j.kwargs.*;
 
 public class Graph {
     private final Map<String, GraphNode> nodes;
@@ -173,7 +173,7 @@ public class Graph {
         return dist;
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, PythonExecutionException {
         Graph graph = Graph.importFromFile("random.dot");
         GraphNode source = graph.nodes.get("0"); // Assuming "0" is the source node
 
@@ -206,34 +206,37 @@ public class Graph {
         System.out.println("Max execution time: " + maxTime + " nanoseconds");
         System.out.println("Min execution time: " + minTime + " nanoseconds");
 
-        long[] executionTimes = new long[graph.nodes.size()];
+        List<Long> slowExecutionTimes = new ArrayList<>();
+        List<Long> fastExecutionTimes = new ArrayList<>();
 
-        // Loop through all the nodes in the graph
-        for (GraphNode node : graph.nodes.values()) {
-            // Run the slow and fast Dijkstra's algorithms for the node
-            Map<GraphNode, Integer> slowShortestPathsNode = graph.slowSP(node);
-            Map<GraphNode, Integer> fastShortestPathsNode = graph.fastSP(node);
+     // Loop through all the nodes in the graph
+     for (GraphNode node : graph.nodes.values()) {
+         // Run the slow and fast Dijkstra's algorithms for the node
+         Map<GraphNode, Integer> slowShortestPathsNode = graph.slowSP(node);
+         Map<GraphNode, Integer> fastShortestPathsNode = graph.fastSP(node);
 
-            // Calculate the execution time for the slow and fast algorithms
-            long slowTime = System.nanoTime();
-            graph.slowSP(node);
-            long slowExecutionTime = System.nanoTime() - slowTime;
+         // Calculate the execution time for the slow and fast algorithms
+         long slowTime = System.nanoTime();
+         graph.slowSP(node);
+         long slowExecutionTime = System.nanoTime() - slowTime;
 
-            long fastTime = System.nanoTime();
-            graph.fastSP(node);
-            long fastExecutionTime = System.nanoTime() - fastTime;
+         long fastTime = System.nanoTime();
+         graph.fastSP(node);
+         long fastExecutionTime = System.nanoTime() - fastTime;
 
-            // Store the execution times in the array
-            int nodeIndex = Integer.parseInt(node.getData());
-            executionTimes[nodeIndex] = Math.max(slowExecutionTime, fastExecutionTime);
-        }
+         // Store the execution times in the list
+         slowExecutionTimes.add(slowExecutionTime);
+         fastExecutionTimes.add(fastExecutionTime);
 
+     }
         // Create a histogram of the execution times
         Plot plt = Plot.create();
-        Hist hist = plt.plot().hist(executionTimes);
-        hist.xlabel("Execution Time (nanoseconds)");
-        hist.ylabel("Frequency");
-        hist.title("Distribution of Execution Times");
+        plt.hist().add(slowExecutionTimes);
+        plt.hist().add(fastExecutionTimes);
+
+        plt.xlabel("Execution Time (nanoseconds)");
+        plt.ylabel("Frequency");
+        plt.title("Distribution of Execution Times");
         plt.show();
     }
 }
