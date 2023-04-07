@@ -1,8 +1,18 @@
+
 package edu.ucalgary.oop;
 
 import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import com.github.plot.Plot;
+import com.github.plot.histogram.HistBuilder;
+import com.github.plot.histogram.HistType;
+
+
 
 public class Graph {
     private final Map<String, GraphNode> nodes;
@@ -70,7 +80,6 @@ public class Graph {
         return graph;
     }
 
-
     public static class GraphNode {
         private final String data;
         private final Map<GraphNode, Integer> edges;
@@ -88,6 +97,7 @@ public class Graph {
             return edges;
         }
     }
+
     public Map<GraphNode, Integer> slowSP(GraphNode source) {
         Map<GraphNode, Integer> dist = new HashMap<>();
         PriorityQueue<GraphNode> pq = new PriorityQueue<>(Comparator.comparing(node -> dist.get(node)));
@@ -119,6 +129,7 @@ public class Graph {
         }
         return dist;
     }
+
     private GraphNode findMinDistNode(Set<GraphNode> nodes, Map<GraphNode, Integer> dist) {
         int minDist = Integer.MAX_VALUE;
         GraphNode minNode = null;
@@ -131,6 +142,7 @@ public class Graph {
         }
         return minNode;
     }
+
     public Map<GraphNode, Integer> fastSP(GraphNode source) {
         Map<GraphNode, Integer> dist = new HashMap<>();
         PriorityQueue<GraphNode> pq = new PriorityQueue<>(Comparator.comparing(node -> dist.get(node)));
@@ -162,23 +174,51 @@ public class Graph {
         }
         return dist;
     }
-    public static void main(String[] args) {
-        Graph graph = Graph.importFromFile("random.dot");
-        GraphNode source = graph.nodes.get("0"); // Assuming "0" is the source node
 
+    public static void main(String[] args) {
+        Graph graph = Graph.importFromFile("/Users/carlsoriano/Documents/GitHub/338-assignment-4/ex4.2/random.dot");
+        GraphNode source = graph.nodes.get("0"); // Assuming "0" is the source node
+    
         if (source == null) {
             System.out.println("Error: Source node 0 not found in the graph");
             return;
         }
-
+    
+        long slowStartTime = System.nanoTime();
         Map<GraphNode, Integer> slowShortestPaths = graph.slowSP(source);
+        long slowEndTime = System.nanoTime();
+        long slowDuration = slowEndTime - slowStartTime;
+    
+        long fastStartTime = System.nanoTime();
         Map<GraphNode, Integer> fastShortestPaths = graph.fastSP(source);
-
+        long fastEndTime = System.nanoTime();
+        long fastDuration = fastEndTime - fastStartTime;
+    
         // Print the results
         System.out.println("Slow Dijkstra's shortest paths:");
         slowShortestPaths.forEach((k, v) -> System.out.println(k.getData() + ": " + v));
-
+        System.out.println("Slow Dijkstra's execution time: " + slowDuration + " nanoseconds");
+    
         System.out.println("\nFast Dijkstra's shortest paths:");
         fastShortestPaths.forEach((k, v) -> System.out.println(k.getData() + ": " + v));
-    }
+        System.out.println("Fast Dijkstra's execution time: " + fastDuration + " nanoseconds");
+    
+        long maxTime = Math.max(slowDuration, fastDuration);
+        long minTime = Math.min(slowDuration, fastDuration);
+        System.out.println("Max execution time: " + maxTime + " nanoseconds");
+        System.out.println("Min execution time: " + minTime + " nanoseconds");
+    
+        // Create histogram
+        List<Long> executionTimes = new ArrayList<>();
+        executionTimes.add(slowDuration);
+        executionTimes.add(fastDuration);
+    
+        Plot plt = Plot.create();
+        HistBuilder hb = plt.hist(executionTimes);
+        hb.type(HistType.RACK);
+        hb.title("Execution time histogram");
+        hb.xlabel("Execution Time (nanoseconds)");
+        hb.ylabel("Frequency");
+        hb.show();
+        }
 }
