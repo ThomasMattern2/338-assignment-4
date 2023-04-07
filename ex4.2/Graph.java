@@ -8,11 +8,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.github.plot.Plot;
-import com.github.plot.histogram.HistBuilder;
-import com.github.plot.histogram.HistType;
-
-
+import com.github.sh0nk.matplotlib4j.*;
+import com.github.sh0nk.matplotlib4j.builder.*;
+import com.github.sh0nk.matplotlib4j.builder.HistBuilder.HistType;
+import com.github.sh0nk.matplotlib4j.kwargs.*;
 
 public class Graph {
     private final Map<String, GraphNode> nodes;
@@ -175,8 +174,8 @@ public class Graph {
         return dist;
     }
 
-    public static void main(String[] args) {
-        Graph graph = Graph.importFromFile("/Users/carlsoriano/Documents/GitHub/338-assignment-4/ex4.2/random.dot");
+    public static void main(String[] args) throws IOException, PythonExecutionException {
+        Graph graph = Graph.importFromFile("random.dot");
         GraphNode source = graph.nodes.get("0"); // Assuming "0" is the source node
     
         if (source == null) {
@@ -212,13 +211,15 @@ public class Graph {
         List<Long> executionTimes = new ArrayList<>();
         executionTimes.add(slowDuration);
         executionTimes.add(fastDuration);
-    
+
         Plot plt = Plot.create();
-        HistBuilder hb = plt.hist(executionTimes);
-        hb.type(HistType.RACK);
-        hb.title("Execution time histogram");
-        hb.xlabel("Execution Time (nanoseconds)");
-        hb.ylabel("Frequency");
-        hb.show();
+        plt.hist().add(executionTimes).orientation(HistBuilder.Orientation.vertical);
+        plt.ylim(0, 1500);
+        plt.xlim(0, 1000);
+
+        plt.title("Execution time histogram");
+        plt.xlabel("Execution Time (nanoseconds)");
+        plt.ylabel("Frequency");
+        plt.show();
         }
 }
